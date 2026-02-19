@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 // 1. URL RAW do seu JSON real
-$url_github_json = "https://raw.githubusercontent.com/kmsom/SEU_REPO/main/seu_arquivo.json";
+$url_github_json = "https://raw.githubusercontent.com/kmsom/pix.assistindo.premium/main/cliente.json";
 
 // 2. Captura o e-mail
 $email_cliente = $_GET['email'] ?? '';
