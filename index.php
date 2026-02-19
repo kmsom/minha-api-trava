@@ -1,35 +1,38 @@
 <?php
 header('Content-Type: application/json');
 
-// 1. URL RAW do seu JSON real (Onde estão os e-mails e datas)
-$url_github_json = "https://raw.githubusercontent.com/SEU_USER/REPO/main/seu_arquivo.json";
+// 1. URL RAW do seu JSON real
+$url_github_json = "https://raw.githubusercontent.com/kmsom/SEU_REPO/main/seu_arquivo.json";
 
-// 2. Captura o e-mail enviado pelo script
+// 2. Captura o e-mail
 $email_cliente = $_GET['email'] ?? '';
 
-if (empty($email_cliente)) {
-    die(json_encode(["autorizado" => false, "msg" => "E-mail vazio"]));
-}
-
-// 3. Pega a data real pelo Google (Anti-fraude)
-$headers = @get_headers('https://www.google.com', 1);
-if (isset($headers['Date'])) {
-    $hoje = new DateTime($headers['Date']);
-    $hoje->setTimezone(new DateTimeZone('America/Sao_Paulo'));
-} else {
-    $hoje = new DateTime(); // Fallback caso o Google falhe
-}
-
-// 4. Lê o JSON do GitHub
+// 3. Lê o JSON do seu GitHub
 $dados_json = @file_get_contents($url_github_json);
 $dados = json_decode($dados_json, true);
 
 if (!$dados) {
-    die(json_encode(["autorizado" => false, "msg" => "Erro no banco de dados"]));
+    die(json_encode(["autorizado" => false, "msg" => "Erro ao ler banco de dados"]));
 }
 
-// 5. Lógica de Verificação
-$resposta = ["autorizado" => false, "msg" => "Usuario nao encontrado"];
+// --- NOVIDADE: VERIFICAÇÃO DE STATUS ---
+if (isset($dados['status']) && $dados['status'] == 0) {
+    // Se o status for 0, envia a mensagem de manutenção e para aqui
+    $mensagem = $dados['msg'] ?? "SISTEMA EM MANUTENÇÃO";
+    die(json_encode(["autorizado" => false, "msg" => $mensagem]));
+}
+
+// 4. Se o status for 1, continua a verificação normal...
+if (empty($email_cliente)) {
+    die(json_encode(["autorizado" => false, "msg" => "E-mail não fornecido"]));
+}
+
+// Pega data real (Google)
+$headers = @get_headers('https://www.google.com', 1);
+$hoje = isset($headers['Date']) ? new DateTime($headers['Date']) : new DateTime();
+$hoje->setTimezone(new DateTimeZone('America/Sao_Paulo'));
+
+$resposta = ["autorizado" => false, "msg" => "Usuário não encontrado"];
 
 if (isset($dados['usuarios'][$email_cliente])) {
     $data_limite = new DateTime($dados['usuarios'][$email_cliente]);
@@ -42,7 +45,7 @@ if (isset($dados['usuarios'][$email_cliente])) {
             "dias" => (int)$diff->format("%a")
         ];
     } else {
-        $resposta = ["autorizado" => false, "msg" => "Assinatura expirada"];
+        $resposta = ["autorizado" => false, "msg" => "Sua licença expirou"];
     }
 }
 
